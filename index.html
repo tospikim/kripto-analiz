@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Kripto Arz Analizörü</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0b0c10;--ink2:#12141a;--ink3:#1a1d26;--ink4:#22263a;--wire:rgba(255,255,255,0.06);--wire2:rgba(255,255,255,0.11);--fg:#dde2f0;--fg2:#8b93a8;--fg3:#454d65;--cyan:#00f5d4;--violet:#8b5cf6;--gold:#f5c842;--rose:#f05a7e;--sky:#38bdf8;--green:#00e5a0;--mono:'JetBrains Mono',monospace;--display:'Syne',sans-serif;--body:'Instrument Sans',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ink);color:var(--fg);font-family:var(--body);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 10% 5%,rgba(0,245,212,.05) 0,transparent 60%),radial-gradient(ellipse 50% 60% at 90% 90%,rgba(139,92,246,.06) 0,transparent 60%);pointer-events:none;z-index:0}
+.page{max-width:1000px;margin:0 auto;padding:0 18px;position:relative;z-index:1}
+/* HEADER */
+.hdr{padding:24px 0 20px;margin-bottom:22px;border-bottom:1px solid var(--wire2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hdr-l{display:flex;align-items:center;gap:14px}
+.hdr-ico{width:44px;height:44px;border:1.5px solid var(--cyan);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;background:rgba(0,245,212,.07);flex-shrink:0}
+.hdr-title{font-family:var(--display);font-size:18px;font-weight:800}
+.hdr-sub{font-size:11px;color:var(--fg3);margin-top:2px;font-family:var(--mono)}
+.hdr-tag{font-family:var(--mono);font-size:10px;padding:4px 11px;border:1px solid rgba(0,245,212,.25);border-radius:20px;color:var(--cyan);background:rgba(0,245,212,.06)}
+/* TABS */
+.tabs{display:flex;gap:3px;background:var(--ink2);border:1px solid var(--wire);border-radius:12px;padding:4px;margin-bottom:18px}
+.tab{flex:1;padding:9px 12px;border:none;border-radius:8px;font-family:var(--body);font-size:13px;font-weight:500;cursor:pointer;color:var(--fg2);background:transparent;transition:.15s}
+.tab.on{background:var(--ink4);color:var(--fg);box-shadow:0 2px 8px rgba(0,0,0,.4)}
+/* SEARCH */
+.sp{background:var(--ink2);border:1px solid var(--wire);border-radius:14px;padding:20px;margin-bottom:16px}
+.srow{display:flex;gap:8px;margin-bottom:13px;flex-wrap:wrap}
+.srow input{flex:1;min-width:190px;padding:11px 15px;background:var(--ink3);border:1.5px solid var(--wire2);border-radius:10px;font-family:var(--mono);font-size:13px;color:var(--fg);outline:none;transition:.18s}
+.srow input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,245,212,.08)}
+.srow input::placeholder{color:var(--fg3)}
+.srow select{padding:11px 12px;background:var(--ink3);border:1.5px solid var(--wire2);border-radius:10px;font-family:var(--mono);font-size:12px;color:var(--fg);outline:none;cursor:pointer}
+.srow select option{background:var(--ink3)}
+.btn-go{padding:11px 26px;background:var(--cyan);color:#000;border:none;border-radius:10px;font-family:var(--display);font-size:13px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap;letter-spacing:.3px}
+.btn-go:hover{background:#00e0c0;transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,245,212,.25)}
+.btn-go:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.ql{font-family:var(--mono);font-size:10px;color:var(--fg3);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{padding:5px 13px;background:var(--ink3);border:1px solid var(--wire2);border-radius:20px;font-size:11px;font-family:var(--mono);color:var(--fg2);cursor:pointer;transition:.12s;user-select:none}
+.chip:hover,.chip.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,245,212,.07)}
+/* MESSAGES */
+.err{display:none;border-radius:10px;padding:13px 16px;margin-bottom:14px;font-size:13px;line-height:1.65;background:rgba(240,90,126,.07);border:1px solid rgba(240,90,126,.3);color:var(--rose)}
+/* LOADING */
+.loading{display:none;padding:3rem 1rem;text-align:center}
+.loader{display:inline-block;position:relative;width:38px;height:38px;margin-bottom:12px}
+.loader::before,.loader::after{content:'';position:absolute;border-radius:50%;border-style:solid;animation:ping 1.2s ease-in-out infinite}
+.loader::before{inset:0;border-width:2px;border-color:var(--cyan);opacity:.4}
+.loader::after{inset:6px;border-width:2px;border-color:var(--violet);opacity:.7;animation-delay:-.4s}
+@keyframes ping{0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.15);opacity:.9}}
+.lt{font-family:var(--mono);font-size:12px;color:var(--fg3);letter-spacing:1px;margin-top:4px}
+.ls{margin-top:5px;font-size:11px;color:var(--fg3);min-height:18px;font-family:var(--mono)}
+/* RESULT */
+.result{display:none}
+.ts{font-family:var(--mono);font-size:10px;color:var(--fg3);margin-bottom:12px}
+/* COIN CARD */
+.ct{background:var(--ink2);border:1px solid var(--wire);border-radius:14px;padding:20px;margin-bottom:10px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.cm{flex:1;min-width:180px}
+.cn{font-family:var(--display);font-size:20px;font-weight:800}
+.cs{font-family:var(--mono);font-size:11px;color:var(--fg2);margin-top:2px}
+.cp{font-size:28px;font-weight:600;font-family:var(--display);margin-top:6px;letter-spacing:-1px}
+.pill{display:inline-block;padding:3px 9px;border-radius:20px;font-family:var(--mono);font-size:11px;font-weight:700;margin-left:8px;vertical-align:middle}
+.up{background:rgba(0,229,160,.12);color:var(--green);border:1px solid rgba(0,229,160,.25)}
+.dn{background:rgba(240,90,126,.12);color:var(--rose);border:1px solid rgba(240,90,126,.25)}
+.spill{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:5px 13px;border-radius:20px;font-family:var(--mono);font-size:11px;font-weight:600}
+.sp-c{background:rgba(0,245,212,.08);color:var(--cyan);border:1px solid rgba(0,245,212,.2)}
+.sp-g{background:rgba(245,200,66,.08);color:var(--gold);border:1px solid rgba(245,200,66,.2)}
+.sp-r{background:rgba(240,90,126,.08);color:var(--rose);border:1px solid rgba(240,90,126,.2)}
+.cr{text-align:right;font-size:12px;color:var(--fg2);font-family:var(--mono)}
+.rnk{font-family:var(--display);font-size:18px;font-weight:800;color:var(--cyan)}
+/* SUPPLY INSIGHT */
+.si{border-radius:10px;padding:11px 15px;margin-bottom:10px;font-size:13px;line-height:1.7;color:var(--fg2)}
+.si-c{background:rgba(0,245,212,.04);border:1px solid rgba(0,245,212,.12)}
+.si-g{background:rgba(245,200,66,.04);border:1px solid rgba(245,200,66,.12)}
+.si-r{background:rgba(240,90,126,.04);border:1px solid rgba(240,90,126,.12)}
+.si-lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;opacity:.7}
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:7px;margin-bottom:10px}
+.mbox{background:var(--ink2);border:1px solid var(--wire);border-radius:10px;padding:10px;text-align:center}
+.ml{font-family:var(--mono);font-size:9px;color:var(--fg3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px}
+.mv{font-family:var(--display);font-size:13px;font-weight:700}
+.ms{font-family:var(--mono);font-size:9px;color:var(--fg3);margin-top:2px}
+/* TRADINGVIEW */
+.tvc{background:var(--ink2);border:1px solid var(--wire);border-radius:14px;overflow:hidden;margin-bottom:10px}
+.tvh{font-family:var(--mono);font-size:10px;color:var(--fg3);text-transform:uppercase;letter-spacing:1px;padding:12px 16px 10px;border-bottom:1px solid var(--wire);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.pb-wrap{display:flex;gap:4px}
+.pb{padding:4px 10px;border:1px solid var(--wire2);border-radius:6px;font-size:11px;font-family:var(--mono);color:var(--fg2);background:transparent;cursor:pointer;transition:.12s}
+.pb:hover,.pb.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,245,212,.07)}
+.tvw{height:460px;background:#131722}
+/* ANALYSIS GRID */
+.agrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px}
+.acard{background:var(--ink2);border:1px solid var(--wire);border-radius:14px;padding:15px}
+.act{font-family:var(--mono);font-size:10px;color:var(--fg3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.tr{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--wire);font-size:12px}
+.tr:last-child{border:none}
+.tn{color:var(--fg2)}
+.tv_v{font-weight:600;color:var(--fg)}
+.tag-g{font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(0,245,212,.1);color:var(--cyan);border:1px solid rgba(0,245,212,.2)}
+.tag-r{font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(240,90,126,.1);color:var(--rose);border:1px solid rgba(240,90,126,.2)}
+.tag-y{font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(245,200,66,.1);color:var(--gold);border:1px solid rgba(245,200,66,.2)}
+.tag-n{font-size:10px;padding:2px 7px;border-radius:20px;background:var(--ink4);color:var(--fg2)}
+.ait{font-size:12px;color:var(--fg2);line-height:1.75}
+/* SCORES */
+.scores{background:var(--ink2);border:1px solid var(--wire);border-radius:14px;padding:16px;margin-bottom:10px}
+.sct{font-family:var(--mono);font-size:10px;color:var(--fg3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.sr{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px}
+.sn{color:var(--fg2);min-width:160px}
+.sb{flex:1;height:5px;background:var(--ink4);border-radius:3px;overflow:hidden}
+.sf{height:100%;border-radius:3px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.sv{font-family:var(--mono);font-size:11px;min-width:40px;text-align:right;color:var(--fg2)}
+/* VERDICT */
+.verd{border-radius:14px;padding:20px;margin-bottom:10px;position:relative;overflow:hidden}
+.verd::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.v-buy{background:var(--ink2);border:2px solid rgba(0,245,212,.2)}.v-buy::before{background:linear-gradient(90deg,var(--cyan),var(--sky))}
+.v-sell{background:var(--ink2);border:2px solid rgba(240,90,126,.2)}.v-sell::before{background:linear-gradient(90deg,var(--rose),var(--gold))}
+.v-hold{background:var(--ink2);border:2px solid rgba(245,200,66,.2)}.v-hold::before{background:linear-gradient(90deg,var(--gold),#e0a000)}
+.v-wait{background:var(--ink2);border:2px solid rgba(139,92,246,.2)}.v-wait::before{background:linear-gradient(90deg,var(--violet),var(--sky))}
+.vl{font-family:var(--mono);font-size:10px;color:var(--fg3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.vsig{font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:10px}
+.vs-buy{color:var(--cyan)}.vs-sell{color:var(--rose)}.vs-hold{color:var(--gold)}.vs-wait{color:var(--violet)}
+.vt{font-size:13px;color:var(--fg2);line-height:1.7;margin-bottom:16px}
+.lvls{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.lv{padding:12px;border-radius:10px;text-align:center}
+.lv-b{background:rgba(0,245,212,.05);border:1px solid rgba(0,245,212,.18)}
+.lv-s{background:rgba(240,90,126,.05);border:1px solid rgba(240,90,126,.18)}
+.ll{font-family:var(--mono);font-size:10px;color:var(--fg3);margin-bottom:4px}
+.lval{font-family:var(--display);font-size:16px;font-weight:800}
+.lpct{font-family:var(--mono);font-size:10px;color:var(--fg3);margin-top:2px}
+/* BURN LIST */
+.bh{background:var(--ink2);border:1px solid var(--wire);border-radius:14px;padding:20px;margin-bottom:14px}
+.bt{font-family:var(--display);font-size:15px;font-weight:800;margin-bottom:5px}
+.bsub{font-size:12px;color:var(--fg2);line-height:1.6;margin-bottom:14px}
+.bfil{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}
+.bf{padding:5px 14px;border:1px solid var(--wire2);border-radius:20px;font-size:11px;cursor:pointer;background:transparent;color:var(--fg2);font-family:var(--body);transition:.12s}
+.bf:hover,.bf.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,245,212,.06)}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:9px}
+.bc{background:var(--ink3);border:1px solid var(--wire);border-radius:12px;padding:14px;transition:.18s;overflow:hidden;position:relative}
+.bc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:12px 12px 0 0}
+.bc.deflationary::before{background:linear-gradient(90deg,var(--sky),var(--cyan))}
+.bc.halving::before{background:linear-gradient(90deg,var(--gold),#ff8c00)}
+.bc.limited::before{background:linear-gradient(90deg,var(--cyan),#00bfa5)}
+.bc.burn::before{background:linear-gradient(90deg,var(--rose),var(--gold))}
+.bc.circulating::before{background:linear-gradient(90deg,var(--violet),var(--sky))}
+.bc:hover{border-color:var(--wire2);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.bc-top{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.bc-ico{font-size:22px}
+.bc-nm{font-family:var(--display);font-size:13px;font-weight:700}
+.bc-sy{font-family:var(--mono);font-size:10px;color:var(--fg2);margin-top:1px}
+.bc-badge{margin-left:auto;font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:20px;font-weight:700;background:var(--ink4);color:var(--fg2);border:1px solid var(--wire2)}
+.bc-desc{font-size:11px;color:var(--fg2);line-height:1.5;margin-bottom:7px}
+.bc-stats{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.bc-stat{font-family:var(--mono);font-size:10px;color:var(--fg3);background:var(--ink4);padding:2px 7px;border-radius:5px}
+.bc-risk{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:6px;margin-bottom:7px;display:inline-block}
+.rl{background:rgba(0,245,212,.06);color:var(--cyan);border:1px solid rgba(0,245,212,.15)}
+.rm{background:rgba(245,200,66,.06);color:var(--gold);border:1px solid rgba(245,200,66,.15)}
+.rh{background:rgba(240,90,126,.06);color:var(--rose);border:1px solid rgba(240,90,126,.15)}
+.bc-btn{width:100%;padding:8px;background:rgba(0,245,212,.05);border:1px solid rgba(0,245,212,.14);border-radius:8px;color:var(--cyan);font-size:11px;font-family:var(--mono);cursor:pointer;transition:.12s;text-align:center}
+.bc-btn:hover{background:rgba(0,245,212,.1)}
+/* DISC */
+.disc{font-size:11px;color:var(--fg3);margin-top:16px;margin-bottom:20px;padding:10px 14px;background:var(--ink2);border:1px solid var(--wire);border-radius:10px;line-height:1.6;font-family:var(--mono)}
+@media(max-width:600px){.ct{flex-direction:column}.cr{text-align:left}.metrics{grid-template-columns:repeat(2,1fr)}.lvls{grid-template-columns:1fr}.agrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+<div class="hdr">
+  <div class="hdr-l">
+    <div class="hdr-ico">⬡</div>
+    <div>
+      <div class="hdr-title">Kripto Arz Analizörü</div>
+      <div class="hdr-sub">AI · CoinMarketCap · TradingView · Teknik & Temel Analiz</div>
+    </div>
+  </div>
+  <span class="hdr-tag">v6.0 — tospikim</span>
+</div>
+
+<div class="tabs">
+  <button class="tab on" onclick="switchTab('analyze',this)">🔍 Coin Analizi</button>
+  <button class="tab" onclick="switchTab('burnlist',this)">🔥 Yakım & Azalan Arz</button>
+</div>
+
+<div id="tab-analyze">
+  <div class="sp">
+    <div class="srow">
+      <input type="text" id="coinInput" placeholder="Coin adı: Bitcoin, Ethereum, HYPE, Solana, BNB ...">
+      <select id="vsCur"><option value="USD">USD $</option><option value="EUR">EUR €</option><option value="TRY">TRY ₺</option></select>
+      <button class="btn-go" id="goBtn" onclick="analyze()">⚡ Analiz Et</button>
+    </div>
+    <div class="ql">Hızlı Seç</div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="err" id="errBox"></div>
+  <div class="loading" id="loadBox">
+    <div class="loader"></div>
+    <div class="lt">AI ANALİZ YAPIYOR</div>
+    <div class="ls" id="loadStep">Veriler toplanıyor...</div>
+  </div>
+  <div class="result" id="resultBox"></div>
+</div>
+
+<div id="tab-burnlist" style="display:none">
+  <div class="bh">
+    <div class="bt">🔥 Yakım, Buyback & Azalan Dolaşım Coinleri</div>
+    <div class="bsub">Deflasyonist arz, yakım programı, buyback veya kilit mekanizmasına sahip projeler. Analiz için butona tıklayın.</div>
+    <div class="bfil">
+      <button class="bf on" onclick="flt('all',this)">Tümü</button>
+      <button class="bf" onclick="flt('halving',this)">🟡 Halving</button>
+      <button class="bf" onclick="flt('deflationary',this)">🟢 Deflasyonist</button>
+      <button class="bf" onclick="flt('burn',this)">🔴 Yakım/Buyback</button>
+      <button class="bf" onclick="flt('limited',this)">🔵 Sınırlı Arz</button>
+      <button class="bf" onclick="flt('circulating',this)">🟣 Azalan Dolaşım</button>
+    </div>
+    <div class="bgrid" id="burnGrid"></div>
+  </div>
+</div>
+
+<div class="disc">⚠️ Yatırım tavsiyesi değildir. Kripto piyasaları yüksek risk taşır. Veriler AI + web araması ile toplanır. DYOR.</div>
+</div>
+
+<script>
+const QUICK=[
+  {n:'Bitcoin',s:'BTC',tv:'BTCUSDT'},{n:'Ethereum',s:'ETH',tv:'ETHUSDT'},
+  {n:'Hyperliquid',s:'HYPE',tv:'HYPEUSDT'},{n:'BNB',s:'BNB',tv:'BNBUSDT'},
+  {n:'Solana',s:'SOL',tv:'SOLUSDT'},{n:'Chainlink',s:'LINK',tv:'LINKUSDT'},
+  {n:'Injective',s:'INJ',tv:'INJUSDT'},{n:'Maker',s:'MKR',tv:'MKRUSDT'},
+  {n:'Avalanche',s:'AVAX',tv:'AVAXUSDT'},{n:'Uniswap',s:'UNI',tv:'UNIUSDT'},
+  {n:'Aave',s:'AAVE',tv:'AAVEUSDT'},{n:'Jupiter',s:'JUP',tv:'JUPUSDT'},
+  {n:'Pendle',s:'PENDLE',tv:'PENDLEUSDT'},{n:'GMX',s:'GMX',tv:'GMXUSDT'},
+  {n:'Curve',s:'CRV',tv:'CRVUSDT'},{n:'Cardano',s:'ADA',tv:'ADAUSDT'},
+  {n:'Litecoin',s:'LTC',tv:'LTCUSDT'},{n:'Ripple',s:'XRP',tv:'XRPUSDT'},
+  {n:'Sui',s:'SUI',tv:'SUIUSDT'},{n:'Render',s:'RNDR',tv:'RNDRUSDT'},
+  {n:'Polkadot',s:'DOT',tv:'DOTUSDT'},{n:'Shiba Inu',s:'SHIB',tv:'SHIBUSDT'}
+];
+
+const BURN=[
+  {id:'Bitcoin',sy:'BTC',ico:'₿',t:'halving',tl:'Halving',d:'21M sabit max. Her 4 yılda halving. 2024: 3.125 BTC/blok. 2140\'da son coin.',st:['Max: 21M','%94+ dolaşım','2028 halving'],r:'rl',rl:'Düşük Risk — En güçlü arz modeli'},
+  {id:'Litecoin',sy:'LTC',ico:'Ł',t:'halving',tl:'Halving',d:'84M max. 2023 halving: 6.25→3.125 LTC.',st:['Max: 84M','%99 dolaşım','2027 halving'],r:'rl',rl:'Düşük Risk'},
+  {id:'Ethereum',sy:'ETH',ico:'Ξ',t:'deflationary',tl:'EIP-1559',d:'Her işlem base fee\'i yakılır. Merge sonrası emisyon %88 düştü.',st:['~800K ETH/yıl','PoS düşük emisyon'],r:'rl',rl:'Düşük Risk'},
+  {id:'Avalanche',sy:'AVAX',ico:'▲',t:'deflationary',tl:'%100 Gas Yakım',d:'Tüm işlem ücretleri yakılır. 720M max.',st:['Max: 720M','%100 gas yakım'],r:'rl',rl:'Düşük Risk'},
+  {id:'MakerDAO',sy:'MKR',ico:'M',t:'deflationary',tl:'Protokol Yakım',d:'DAI faiz geliri → MKR satın al → yak.',st:['Sürekli yakım','DAI faiz=yakım'],r:'rl',rl:'Düşük Risk'},
+  {id:'Aave',sy:'AAVE',ico:'A',t:'deflationary',tl:'Buyback+Yakım',d:'Protokol geliri AAVE buyback+burn. Safety Module.',st:['Max: 16M','Buyback+burn'],r:'rl',rl:'Düşük Risk'},
+  {id:'GMX',sy:'GMX',ico:'G',t:'deflationary',tl:'Fee Redistribution',d:'Ücretler staker\'lara. %30+ staking. 13.25M max.',st:['Max: 13.25M','%30+ staking'],r:'rm',rl:'Orta Risk'},
+  {id:'BNB',sy:'BNB',ico:'B',t:'burn',tl:'Quarterly Burn',d:'Her çeyrek buyback+burn. Auto-Burn. Hedef: 100M.',st:['Hedef: 100M BNB','Auto-Burn aktif'],r:'rl',rl:'Düşük Risk'},
+  {id:'Injective',sy:'INJ',ico:'I',t:'burn',tl:'Haftalık %60 Yakım',d:'Her hafta gelirin %60\'ı buyback+burn. 100M max.',st:['Max: 100M INJ','%60 gelir yakımı'],r:'rl',rl:'Düşük Risk'},
+  {id:'Uniswap',sy:'UNI',ico:'U',t:'burn',tl:'Fee Switch Olası',d:'1B max, vesting bitti. Fee switch onaylanırsa buyback.',st:['Max: 1B UNI','Fee switch olası'],r:'rm',rl:'Orta Risk'},
+  {id:'Jupiter',sy:'JUP',ico:'J',t:'burn',tl:'130M Yakım',d:'Kasım 2025\'te 130M JUP yakıldı. Net-zero plan.',st:['130M yakıldı','Net-zero plan'],r:'rm',rl:'Orta Risk'},
+  {id:'Shiba Inu',sy:'SHIB',ico:'🐕',t:'burn',tl:'Burn Portal',d:'Shibarium gas + Burn Portal ile sürekli yakım.',st:['Shibarium yakım','Burn Portal aktif'],r:'rh',rl:'Yüksek Risk'},
+  {id:'Hyperliquid',sy:'HYPE',ico:'H',t:'circulating',tl:'Azalan Dolaşım',d:'%99 ücret → günlük HYPE buyback. 37M+ yakıldı. %41.8 stake. 2025-2027 vesting riski.',st:['~$1M/gün buyback','37M+ yakıldı','%41.8 stake'],r:'rm',rl:'Orta Risk — Vesting dikkat'},
+  {id:'Curve',sy:'CRV',ico:'C',t:'circulating',tl:'veCRV Kilit',d:'4 yıla kadar veCRV kilidi. %40+ kilitli.',st:['4 yıl kilit','%40+ kilitli'],r:'rh',rl:'Yüksek Risk'},
+  {id:'Pendle',sy:'PENDLE',ico:'P',t:'circulating',tl:'vePENDLE Kilit',d:'vePENDLE kilidi büyük miktarı dolaşımdan çıkarır.',st:['vePENDLE lock','2026 terminal'],r:'rm',rl:'Orta Risk'},
+  {id:'Chainlink',sy:'LINK',ico:'L',t:'limited',tl:'Sınırlı Arz',d:'1B max. Staking v0.2 ile kilitlendi. CCIP büyümesi.',st:['Max: 1B LINK','Staking v0.2'],r:'rl',rl:'Düşük Risk'},
+  {id:'Cardano',sy:'ADA',ico:'₳',t:'limited',tl:'Sınırlı Arz',d:'45B max. Staking ödülleri rezervden. %60+ staking.',st:['Max: 45B ADA','%60+ staking'],r:'rl',rl:'Düşük Risk'},
+  {id:'Render Network',sy:'RNDR',ico:'R',t:'deflationary',tl:'AI Render Yakım',d:'GPU render işlemleri RNDR yakar. AI talebi artar.',st:['AI render talebi','Solana tabanlı'],r:'rm',rl:'Orta Risk'},
+];
+
+var tvSym='BTCUSDT';
+var tvWidget=null;
+
+window.addEventListener('DOMContentLoaded',function(){
+  var ch=document.getElementById('chips');
+  QUICK.forEach(function(c){
+    var b=document.createElement('button');
+    b.className='chip';b.textContent=c.s;b.title=c.n;
+    b.onclick=function(){
+      document.querySelectorAll('.chip').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on');
+      document.getElementById('coinInput').value=c.n;
+      tvSym=c.tv;
+      analyze();
+    };
+    ch.appendChild(b);
+  });
+  renderBurn();
+});
+
+function switchTab(t,btn){
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');
+  document.getElementById('tab-analyze').style.display=t==='analyze'?'block':'none';
+  document.getElementById('tab-burnlist').style.display=t==='burnlist'?'block':'none';
+}
+
+function renderBurn(){
+  var g=document.getElementById('burnGrid');g.innerHTML='';
+  BURN.forEach(function(c){
+    var d=document.createElement('div');d.className='bc '+c.t;d.dataset.t=c.t;
+    d.innerHTML='<div class="bc-top"><div class="bc-ico">'+c.ico+'</div><div><div class="bc-nm">'+c.id+'</div><div class="bc-sy">'+c.sy+'</div></div><span class="bc-badge">'+c.tl+'</span></div><div class="bc-desc">'+c.d+'</div><div class="bc-stats">'+c.st.map(function(s){return'<span class="bc-stat">'+s+'</span>';}).join('')+'</div><div class="bc-risk '+c.r+'">'+c.rl+'</div><button class="bc-btn" onclick="qA(\''+c.id+'\',\''+c.sy+'\')">⚡ Analiz Et →</button>';
+    g.appendChild(d);
+  });
+}
+
+function flt(type,btn){
+  document.querySelectorAll('.bf').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');
+  document.querySelectorAll('.bc').forEach(function(c){c.style.display=(type==='all'||c.dataset.t===type)?'':'none';});
+}
+
+function qA(name,sym){
+  switchTab('analyze',document.querySelectorAll('.tab')[0]);
+  document.getElementById('coinInput').value=name;
+  var q=QUICK.find(function(x){return x.s===sym;});
+  tvSym=q?q.tv:sym+'USDT';
+  analyze();
+}
+
+function symOf(vs){return vs==='TRY'?'₺':vs==='EUR'?'€':'$';}
+function showErr(m){var e=document.getElementById('errBox');e.innerHTML=m;e.style.display='block';}
+function hideErr(){document.getElementById('errBox').style.display='none';}
+
+function fmt(n,vs){
+  var s=symOf(vs);if(n==null||isNaN(n))return'—';
+  var a=Math.abs(n),sg=n<0?'-':'';
+  if(a>=1e12)return sg+s+(a/1e12).toFixed(2)+'T';
+  if(a>=1e9)return sg+s+(a/1e9).toFixed(2)+'B';
+  if(a>=1e6)return sg+s+(a/1e6).toFixed(2)+'M';
+  if(a>=1000)return sg+s+a.toLocaleString(undefined,{maximumFractionDigits:2});
+  if(a<0.0001)return sg+s+a.toFixed(8);if(a<0.01)return sg+s+a.toFixed(6);
+  if(a<1)return sg+s+a.toFixed(4);return sg+s+a.toFixed(2);
+}
+function pct(n){if(n==null||isNaN(n))return'—';return(n>0?'+':'')+Number(n).toFixed(2)+'%';}
+
+function loadTV(sym,interval){
+  interval=interval||'D';
+  var container=document.getElementById('tv-widget-inner');
+  if(!container)return;
+  container.innerHTML='';
+  if(window.TradingView){
+    new TradingView.widget({
+      container_id:'tv-widget-inner',
+      autosize:true,
+      symbol:'BINANCE:'+sym,
+      interval:interval,
+      timezone:'Europe/Istanbul',
+      theme:'dark',
+      style:'1',
+      locale:'tr',
+      toolbar_bg:'#131722',
+      enable_publishing:false,
+      hide_top_toolbar:false,
+      save_image:false,
+      studies:['RSI@tv-basicstudies','MACD@tv-basicstudies','BB@tv-basicstudies']
+    });
+  } else {
+    var s=document.createElement('script');
+    s.src='https://s3.tradingview.com/tv.js';
+    s.onload=function(){
+      new TradingView.widget({
+        container_id:'tv-widget-inner',
+        autosize:true,
+        symbol:'BINANCE:'+sym,
+        interval:interval,
+        timezone:'Europe/Istanbul',
+        theme:'dark',
+        style:'1',
+        locale:'tr',
+        toolbar_bg:'#131722',
+        enable_publishing:false,
+        save_image:false,
+        studies:['RSI@tv-basicstudies','MACD@tv-basicstudies','BB@tv-basicstudies']
+      });
+    };
+    document.head.appendChild(s);
+  }
+}
+
+function setPeriod(interval,btn){
+  document.querySelectorAll('.pb').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  loadTV(tvSym,interval);
+}
+
+async function analyze(){
+  var name=document.getElementById('coinInput').value.trim();
+  var vs=document.getElementById('vsCur').value;
+  if(!name){showErr('Lütfen coin adı girin.');return;}
+  hideErr();
+  document.getElementById('resultBox').style.display='none';
+  document.getElementById('resultBox').innerHTML='';
+  document.getElementById('loadBox').style.display='block';
+  document.getElementById('goBtn').disabled=true;
+
+  var q=QUICK.find(function(c){return c.n.toLowerCase()===name.toLowerCase()||c.s.toLowerCase()===name.toLowerCase();});
+  if(q)tvSym=q.tv;else tvSym=name.toUpperCase().replace(/\s+/g,'')+'USDT';
+
+  var steps=['📡 CoinMarketCap verisi çekiliyor...','🏭 Arz mekanizması analiz ediliyor...','📈 Teknik göstergeler hesaplanıyor...','🔍 Haberler taranıyor...','🧠 AI raporu hazırlanıyor...'];
+  var si=0;var stEl=document.getElementById('loadStep');
+  var iv=setInterval(function(){stEl.textContent=steps[si%steps.length];si++;},1700);
+
+  try{
+    var res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','anthropic-dangerous-request-allow-browser':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        system:'Kripto para analisti olarak Türkçe yanıt ver.\n1. coinmarketcap.com\'dan güncel fiyat, mcap, hacim, dolaşım arzı, max arz, ATH, sıralama bul\n2. Yakım/halving/buyback/vesting/dolaşım değişimi araştır\n3. RSI, MACD, trend, Bollinger, SMA20/50/200 teknik analizi yap\n4. Proje haberleri, ekosistem değerlendir\n5. Net alım/satım seviyeleri belirle\n\nYALNIZCA JSON döndür:\n{"name":"","symbol":"","price":0,"price_str":"","change_24h":0,"change_7d":0,"volume_24h":"","market_cap":"","rank":0,"circulating":"","max_supply":"","ath":"","atl":"","ath_dist":0,"supply_type":"halving|deflationary|burn|limited|circulating_decrease|inflationary|neutral","supply_label":"","supply_score":0,"rsi":0,"rsi_label":"","macd":"Yükseliş|Düşüş","trend":"YÜKSELİŞ|DÜŞÜŞ|YAN","bollinger":"Alt Band|Orta|Üst Band","sma20_rel":"Üzeri|Altı","sma50_rel":"Üzeri|Altı","sma200_rel":"Üzeri|Altı|Veri yok","golden_cross":null,"tech_score":0,"supply_analysis":"","fundamental_analysis":"","technical_analysis":"","overall_verdict":"GÜÇLÜ ALIM|ALIM|BEKLE|KÂR AL|SATIL|UZAK DUR","verdict_class":"buy|sell|hold|wait","verdict_text":"","buy1":0,"buy2":0,"sell1":0,"sell2":0,"overall_score":0,"sources":[]}',
+        messages:[{role:'user',content:name+' coinini analiz et. '+vs+' cinsinden belirt. Güncel web verisi kullan.'}]
+      })
+    });
+    if(!res.ok){var e=await res.json().catch(function(){return{};});throw new Error(e&&e.error?e.error.message:'HTTP '+res.status);}
+    var data=await res.json();
+    var txt=(data.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
+    var m=txt.match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('Yanıt ayrıştırılamadı. Tekrar deneyin.');
+    clearInterval(iv);
+    document.getElementById('loadBox').style.display='none';
+    render(JSON.parse(m[0]),vs,name);
+  }catch(err){
+    clearInterval(iv);
+    document.getElementById('loadBox').style.display='none';
+    showErr('⚠️ '+err.message);
+  }
+  document.getElementById('goBtn').disabled=false;
+}
+
+function render(a,vs,inputName){
+  var price=Number(a.price)||0;
+  var chg=Number(a.change_24h)||0;
+  var sc=Number(a.overall_score)||50;
+  var tsc=Number(a.tech_score)||50;
+  var ssc=Number(a.supply_score)||50;
+  var athDist=Number(a.ath_dist)||0;
+  var pot=Math.min(100,Math.abs(athDist));
+  var spCls=a.supply_type==='inflationary'?'sp-r':a.supply_type==='halving'||a.supply_type==='neutral'?'sp-g':'sp-c';
+  var vClass={buy:'v-buy',sell:'v-sell',hold:'v-hold',wait:'v-wait'}[a.verdict_class]||'v-hold';
+  var vsClass={buy:'vs-buy',sell:'vs-sell',hold:'vs-hold',wait:'vs-wait'}[a.verdict_class]||'vs-hold';
+  var b1=Number(a.buy1)||price*0.95,b2=Number(a.buy2)||price*0.88;
+  var s1=Number(a.sell1)||price*1.12,s2=Number(a.sell2)||price*1.20;
+  var siCls=a.supply_type==='inflationary'?'si-r':a.supply_type==='neutral'?'si-g':'si-c';
+
+  document.getElementById('resultBox').innerHTML=
+'<div class="ts">AI + Web Arama · '+(a.sources||['CMC','CoinGecko']).join(' · ')+' · '+new Date().toLocaleString('tr-TR')+'</div>'+
+'<div class="ct">'+
+'<div style="width:48px;height:48px;border-radius:50%;background:var(--ink4);border:2px solid var(--wire2);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;font-family:var(--display);color:var(--cyan)">'+(a.symbol||'?').charAt(0)+'</div>'+
+'<div class="cm">'+
+'<div class="cn">'+(a.name||inputName)+'</div>'+
+'<div class="cs">'+(a.symbol||'')+'</div>'+
+'<div class="cp">'+(a.price_str||fmt(price,vs))+'<span class="pill '+(chg>=0?'up':'dn')+'">'+pct(chg)+' 24s</span></div>'+
+'<div class="spill '+spCls+'">'+(a.supply_label||'—')+'</div>'+
+'</div>'+
+'<div class="cr">'+
+'<div class="rnk">#'+(a.rank||'—')+'</div>'+
+'<div>MCap: '+(a.market_cap||'—')+'</div>'+
+'<div>Hacim: '+(a.volume_24h||'—')+'</div>'+
+'<div>ATH: '+(a.ath||'—')+' <span style="color:'+(athDist>-25?'var(--rose)':'var(--cyan)')+'">('+(pct(athDist))+')</span></div>'+
+(a.change_7d!=null?'<div>7G: <span style="color:'+(Number(a.change_7d)>=0?'var(--cyan)':'var(--rose)')+'">'+pct(a.change_7d)+'</span></div>':'')+
+'</div></div>'+
+
+'<div class="si '+siCls+'"><div class="si-lbl">🏭 Arz Mekanizması</div>'+(a.supply_analysis||'—')+'</div>'+
+
+'<div class="metrics">'+
+'<div class="mbox"><div class="ml">Dolaşım</div><div class="mv" style="font-size:11px">'+(a.circulating||'—')+'</div></div>'+
+'<div class="mbox"><div class="ml">Maks Arz</div><div class="mv" style="font-size:11px;color:'+(a.max_supply&&!String(a.max_supply).includes('ınır')?'var(--cyan)':'var(--rose)')+';">'+(a.max_supply||'—')+'</div></div>'+
+'<div class="mbox"><div class="ml">RSI 14</div><div class="mv" style="color:'+(a.rsi<30?'var(--cyan)':a.rsi>70?'var(--rose)':'var(--fg)')+'">'+(a.rsi||'—')+'</div><div class="ms">'+(a.rsi_label||'')+'</div></div>'+
+'<div class="mbox"><div class="ml">MACD</div><div class="mv" style="font-size:11px;color:'+(a.macd==='Yükseliş'?'var(--cyan)':'var(--rose)')+';">'+(a.macd||'—')+'</div></div>'+
+'<div class="mbox"><div class="ml">Trend</div><div class="mv" style="font-size:11px;color:'+(a.trend==='YÜKSELİŞ'?'var(--cyan)':a.trend==='DÜŞÜŞ'?'var(--rose)':'var(--gold)')+';">'+(a.trend||'—')+'</div></div>'+
+'<div class="mbox"><div class="ml">Bollinger</div><div class="mv" style="font-size:11px">'+(a.bollinger||'—')+'</div></div>'+
+'<div class="mbox"><div class="ml">SMA 20</div><div class="mv" style="font-size:11px;color:'+(a.sma20_rel==='Üzeri'?'var(--cyan)':'var(--rose)')+';">'+(a.sma20_rel||'—')+'</div></div>'+
+'<div class="mbox"><div class="ml">SMA 50</div><div class="mv" style="font-size:11px;color:'+(a.sma50_rel==='Üzeri'?'var(--cyan)':'var(--rose)')+';">'+(a.sma50_rel||'—')+'</div></div>'+
+'<div class="mbox"><div class="ml">SMA 200</div><div class="mv" style="font-size:11px;color:'+(a.sma200_rel==='Üzeri'?'var(--cyan)':a.sma200_rel==='Altı'?'var(--rose)':'var(--fg3)')+';">'+(a.sma200_rel||'—')+'</div><div class="ms">'+(a.golden_cross===true?'Altın Çapraz':a.golden_cross===false?'Ölüm Çaprazı':'')+'</div></div>'+
+'<div class="mbox"><div class="ml">ATH Uzaklık</div><div class="mv" style="color:'+(athDist>-25?'var(--rose)':'var(--cyan)')+';">'+(pct(athDist))+'</div></div>'+
+'</div>'+
+
+'<div class="tvc">'+
+'<div class="tvh">'+
+'<span>📈 TradingView Canlı — '+tvSym+' · RSI · MACD · Bollinger</span>'+
+'<div class="pb-wrap">'+
+'<button class="pb" onclick="setPeriod(\'60\',this)">1s</button>'+
+'<button class="pb" onclick="setPeriod(\'240\',this)">4s</button>'+
+'<button class="pb on" onclick="setPeriod(\'D\',this)">1G</button>'+
+'<button class="pb" onclick="setPeriod(\'W\',this)">1H</button>'+
+'<button class="pb" onclick="setPeriod(\'M\',this)">1A</button>'+
+'</div>'+
+'</div>'+
+'<div class="tvw"><div id="tv-widget-inner" style="height:460px;"></div></div>'+
+'</div>'+
+
+'<div class="agrid">'+
+'<div class="acard"><div class="act">📊 Teknik Analiz</div><div class="ait">'+(a.technical_analysis||'—')+'</div></div>'+
+'<div class="acard"><div class="act">🔍 Temel Analiz & Haberler</div><div class="ait">'+(a.fundamental_analysis||'—')+'</div></div>'+
+'</div>'+
+
+'<div class="scores">'+
+'<div class="sct">⚡ Genel Analiz Skorları</div>'+
+'<div class="sr"><span class="sn">Arz yapısı kalitesi</span><div class="sb"><div class="sf" style="width:'+ssc+'%;background:'+(ssc>70?'var(--cyan)':ssc>40?'var(--gold)':'var(--rose)')+'"></div></div><span class="sv">'+ssc+'/100</span></div>'+
+'<div class="sr"><span class="sn">Teknik momentum</span><div class="sb"><div class="sf" style="width:'+tsc+'%;background:var(--sky)"></div></div><span class="sv">'+tsc+'/100</span></div>'+
+'<div class="sr"><span class="sn">ATH potansiyeli</span><div class="sb"><div class="sf" style="width:'+pot+'%;background:var(--violet)"></div></div><span class="sv">'+pot.toFixed(0)+'/100</span></div>'+
+'<div class="sr"><span class="sn" style="font-weight:700;color:var(--fg)">⚡ Genel skor</span><div class="sb"><div class="sf" style="width:'+sc+'%;background:'+(sc>70?'var(--cyan)':sc>45?'var(--gold)':'var(--rose)')+'"></div></div><span class="sv" style="font-size:13px;font-weight:700;color:var(--fg)">'+sc+'/100</span></div>'+
+'</div>'+
+
+'<div class="verd '+vClass+'">'+
+'<div class="vl">Analiz Sonucu & Sinyal</div>'+
+'<div class="vsig '+vsClass+'">'+(a.overall_verdict||'BEKLE')+'</div>'+
+'<div class="vt">'+(a.verdict_text||'—')+'</div>'+
+'<div class="lvls">'+
+'<div class="lv lv-b"><div class="ll">🟢 Alım Seviyesi 1</div><div class="lval">'+fmt(b1,vs)+'</div><div class="lpct">'+(price?((b1/price-1)*100).toFixed(1)+'%':'')+'</div></div>'+
+'<div class="lv lv-b"><div class="ll">🟢 Alım Seviyesi 2</div><div class="lval">'+fmt(b2,vs)+'</div><div class="lpct">'+(price?((b2/price-1)*100).toFixed(1)+'%':'')+'</div></div>'+
+'<div class="lv lv-s"><div class="ll">🔴 Hedef 1 / Satış</div><div class="lval">'+fmt(s1,vs)+'</div><div class="lpct">+'+(price?((s1/price-1)*100).toFixed(1)+'%':'')+'</div></div>'+
+'<div class="lv lv-s"><div class="ll">🔴 Hedef 2 / Satış</div><div class="lval">'+fmt(s2,vs)+'</div><div class="lpct">+'+(price?((s2/price-1)*100).toFixed(1)+'%':'')+'</div></div>'+
+'</div></div>';
+
+  document.getElementById('resultBox').style.display='block';
+  window.scrollTo({top:document.getElementById('resultBox').offsetTop-20,behavior:'smooth'});
+  setTimeout(function(){loadTV(tvSym,'D');},300);
+}
+
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.activeElement===document.getElementById('coinInput'))analyze();});
+</script>
+</body>
+</html>
